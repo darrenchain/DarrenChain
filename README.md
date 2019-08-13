@@ -8,7 +8,8 @@ You can clone this repo and run <code>main.exe</code> directly.
 __All System:__
 
 Since we’re going to run this chain, you should <a href="https://golang.org/dl/">installing</a> and configuring Golang first.
-We’ll also want to grab the following packages:
+
+And we’ll also want to grab the following packages:
 
 ```shell
 go get github.com/davecgh/go-spew/spew
