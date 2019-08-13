@@ -40,6 +40,6 @@ Now, visit localhost with port 8080. As expected, we see the same genesis block.
 
 For using POST requests, i like to use Postman ( in GUI ) and Curl ( in CLI ).
 
-![Get genesis block](assets/img_03.png)
+![POST method in Postman](assets/img_03.png)
 
-![Get genesis block](assets/img_02.png)
+![Get method in curl](assets/img_02.png)
