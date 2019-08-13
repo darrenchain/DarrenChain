@@ -7,7 +7,7 @@ You can clone this repo and run <code>main.exe</code> directly.
 
 __All System:__
 
-Since we’re going to run this chain, you should installing and configuring Golang first.
+Since we’re going to run this chain, you should <a href="https://golang.org/dl/">installing</a> and configuring Golang first.
 We’ll also want to grab the following packages:
 
 ```shell
