@@ -26,6 +26,10 @@ If you all done, type the following commands to run the chain:
 
 ```shell
 git clone https://github.com/darrenchain/SimpleChain_preview_19.0.git
+cd https://github.com/darrenchain/SimpleChain_preview_19.0.git
+```
+
+```shell
 go run main.go
 ```
 
