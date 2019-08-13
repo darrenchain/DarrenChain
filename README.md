@@ -30,10 +30,11 @@ go run main.go
 ```
 
 Now, visit localhost with port 8080. As expected, we see the same genesis block.
+
 ![Get genesis block](assets/img_01.png)
 
 For using POST requests, i like to use Postman and Curl ( in Terminal ).
+
 ![Get genesis block](assets/img_03.png)
 
-For using POST requests, i like to use Postman and Curl ( in Terminal ).
 ![Get genesis block](assets/img_02.png)
