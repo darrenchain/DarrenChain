@@ -38,7 +38,7 @@ Now, visit localhost with port 8080. As expected, we see the same genesis block.
 
 ![Get genesis block](assets/img_01.png)
 
-For using POST requests, i like to use Postman and Curl ( in Terminal ).
+For using POST requests, i like to use Postman ( in GUI ) and Curl ( in CLI ).
 
 ![Get genesis block](assets/img_03.png)
 
