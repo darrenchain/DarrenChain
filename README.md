@@ -5,6 +5,8 @@ __Windows System:__
 
 You can clone this repo and run <code>main.exe</code> directly.
 
+![Server_EXE](assets\Server_EXE.png)
+
 __All System:__
 
 Since we’re going to run this chain, you should <a href="https://golang.org/dl/">installing</a> and configuring Golang first.
@@ -13,10 +15,6 @@ And we’ll also want to grab the following packages:
 
 ```shell
 go get github.com/davecgh/go-spew/spew
-```
-
-```shell
-go get github.com/gorilla/mux
 ```
 
 ```shell
@@ -34,12 +32,20 @@ cd SimpleChain_preview_19.0
 go run main.go
 ```
 
-Now, visit localhost with port 8080. As expected, we see the same genesis block.
+As expected, we see the same genesis block.
 
-![Get genesis block](assets/img_01.png)
+![Server Compiled](assets\Server_compiled.png)
 
-For using POST requests, i like to use Postman ( in GUI ) and Curl ( in CLI ).
+Finally, open your Terminal (It called "Command Prompt" on Windows System), and type the following command to run the client service:
 
-![POST method in Postman](assets/img_03.png)
+Windows: <code>ncat localhost 9000</code>
 
-![Get method in curl](assets/img_02.png)
+Linux: <code>nc localhost 9000</code>
+
+Then, we will see the same picture.
+
+![Client_ncat](assets\Client_ncat.png)
+
+Side Note: You can open multiple command line interface to activate multiple clients. I suggest you use a different color interface to make sure these are different clients like this:
+
+![Server Clients Broadcast](assets\server_client_broadcast.png)
