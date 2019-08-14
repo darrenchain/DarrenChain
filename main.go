@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -92,7 +91,7 @@ func main() {
 	Blockchain = append(Blockchain, genesisBlock)
 
 	// Run & Serve TCP Server
-	server, err := net.Listen("tcp", ":"+os.Getenv("ADDR"))
+	server, err := net.Listen("tcp", ":"+"9000")
 	if err != nil {
 		log.Fatal(err)
 	}
