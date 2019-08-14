@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -132,4 +133,20 @@ func handleConn(conn net.Conn) {
 			io.WriteString(conn, "\nType the Data >> ")
 		}
 	}()
+
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			output, err := json.Marshal(Blockchain)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+			io.WriteString(conn, string(output))
+		}
+	}()
+
+	for _ = range bcServer {
+		spew.Dump(Blockchain)
+	}
 }
