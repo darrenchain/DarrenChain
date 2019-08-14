@@ -5,7 +5,7 @@ __Windows System:__
 
 You can clone this repo and run <code>main.exe</code> directly.
 
-![Server_EXE](assets\Server_EXE.png)
+![Server_EXE](assets/Server_EXE.png)
 
 __All System:__
 
@@ -34,7 +34,7 @@ go run main.go
 
 As expected, we see the same genesis block.
 
-![Server Compiled](assets\Server_compiled.png)
+![Server Compiled](assets/Server_compiled.png)
 
 Finally, open your Terminal (It called "Command Prompt" on Windows System), and type the following command to run the client service:
 
@@ -44,8 +44,8 @@ Linux: <code>nc localhost 9000</code>
 
 Then, we will see the same picture.
 
-![Client_ncat](assets\Client_ncat.png)
+![Client_ncat](assets/Client_ncat.png)
 
 Side Note: You can open multiple command line interface to activate multiple clients. I suggest you use a different color interface to make sure these are different clients like this:
 
-![Server Clients Broadcast](assets\server_client_broadcast.png)
+![Server Clients Broadcast](assets/server_client_broadcast.png)
