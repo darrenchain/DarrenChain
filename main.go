@@ -1,9 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
+	"log"
+	"net"
+	"os"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/joho/godotenv"
 )
 
 // This Defines the Block Structure in the Blockchain
@@ -59,6 +67,69 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 	return true
 }
 
-func main() {
+// Declare a Channel for handling incoming concurrent Blocks
+var bcServer chan []Block
 
+func replaceChain(newBlocks []Block) {
+	if len(newBlocks) > len(Blockchain) {
+		Blockchain = newBlocks
+	}
+}
+
+func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bcServer = make(chan []Block)
+
+	// Create genesis Block
+	t := time.Now()
+	genesisBlock := Block{0, t.String(), "INIT: This is Genesis Block.", "", ""}
+	spew.Dump(genesisBlock)
+	Blockchain = append(Blockchain, genesisBlock)
+
+	// Run & Serve TCP Server
+	server, err := net.Listen("tcp", ":"+os.Getenv("ADDR"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer server.Close()
+
+	// Create a New Connection when the Server receives a Connection Request
+	for {
+		conn, err := server.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		go handleConn(conn)
+	}
+}
+
+func handleConn(conn net.Conn) {
+	defer conn.Close()
+
+	io.WriteString(conn, "Type the Data >> ")
+
+	scanner := bufio.NewScanner(conn)
+
+	go func() {
+		for scanner.Scan() {
+			payload_data := scanner.Text()
+
+			newBlock, err := generateBlock(Blockchain[len(Blockchain)-1], payload_data)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+				newBlockchain := append(Blockchain, newBlock)
+				replaceChain(newBlockchain)
+			}
+
+			bcServer <- Blockchain
+			io.WriteString(conn, "\nType the Data >> ")
+		}
+	}()
 }
