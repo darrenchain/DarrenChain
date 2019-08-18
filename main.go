@@ -37,6 +37,7 @@ type Block struct {
 
 // Checked-190818-2147
 var Blockchain []Block
+var genesisBlock Block
 
 // Checked-190818-2147
 type Message struct {
@@ -132,7 +133,7 @@ func run() error {
 func makeMuxRouter() http.Handler {
 	muxRouter := mux.NewRouter()
 	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("Get")
-	muxRouter.HandleFunc("/", handleWriteBlockchain).Methods("POST")
+	muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
 	return muxRouter
 }
 
@@ -147,7 +148,7 @@ func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
 }
 
 // Checked-190818-2154
-func handleWriteBlockchain(w http.ResponseWriter, r *http.Request) {
+func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var m Message
 
@@ -164,7 +165,7 @@ func handleWriteBlockchain(w http.ResponseWriter, r *http.Request) {
 	mutex.Unlock()
 
 	if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
-		Blockchain := append(Blockchain, newBlock)
+		Blockchain = append(Blockchain, newBlock)
 		spew.Dump(Blockchain)
 	}
 
@@ -198,8 +199,8 @@ func main() {
 
 	go func() {
 		t := time.Now()
-		genesisBlock := Block{}
-		genesisBlock = Block{0, t.String(), "INIT. Payload Data", calculateHash(genesisBlock), "", difficulty, ""}
+		// genesisBlock := Block{}
+		genesisBlock := Block{0, t.String(), "INIT. Payload Data", calculateHash(genesisBlock), "", difficulty, ""}
 		spew.Dump(genesisBlock)
 
 		mutex.Lock()
