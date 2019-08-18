@@ -1,12 +1,17 @@
 package main
 
+// Checked-190818-2145
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -14,25 +19,44 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Checked-190818-2147
+const difficulty = 1
+
+// Checked-190818-2146
 type Block struct {
 	Index       int
 	Timestamp   string
 	PayloadData string
 	Hash        string
 	PrevHash    string
+
+	// PoW Struture
+	Difficulty int
+	Nonce      string
 }
 
+// Checked-190818-2147
 var Blockchain []Block
 
+// Checked-190818-2147
+type Message struct {
+	PayloadData string
+}
+
+// Checked-190818-2147
+var mutex = &sync.Mutex{}
+
+// Checked-190818-2158
 func calculateHash(block Block) string {
-	record := string(block.Index) + block.Timestamp + block.PayloadData + block.PrevHash
+	record := strconv.Itoa(block.Index) + block.Timestamp + block.PayloadData + block.PrevHash + block.Nonce
 	h := sha256.New()
 	h.Write([]byte(record))
 	hashed := h.Sum(nil)
 	return hex.EncodeToString(hashed)
 }
 
-func generateBlock(oldBlock Block, PayloadData string) (Block, error) {
+// Modified-190818-2016
+func generateBlock(oldBlock Block, PayloadData string) Block {
 	var newBlock Block
 
 	t := time.Now()
@@ -41,11 +65,27 @@ func generateBlock(oldBlock Block, PayloadData string) (Block, error) {
 	newBlock.Timestamp = t.String()
 	newBlock.PayloadData = PayloadData
 	newBlock.PrevHash = oldBlock.Hash
-	newBlock.Hash = calculateHash(newBlock)
 
-	return newBlock, nil
+	// PoW Struture
+	newBlock.Difficulty = difficulty
+	for i := 0; ; i++ {
+		hex := fmt.Sprintf("%x", i)
+		newBlock.Nonce = hex
+
+		if !isHashValid(calculateHash(newBlock), newBlock.Difficulty) {
+			fmt.Println(calculateHash(newBlock), " is still generating...")
+			time.Sleep(time.Second)
+			continue
+		} else {
+			fmt.Println(calculateHash(newBlock), " generation succeeded!!")
+			newBlock.Hash = calculateHash(newBlock)
+			break
+		}
+	}
+	return newBlock
 }
 
+// Checked-190818-2156
 func isBlockValid(newBlock, oldBlock Block) bool {
 	if oldBlock.Index+1 != newBlock.Index {
 		return false
@@ -62,12 +102,13 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 	return true
 }
 
-func replaceChain(newBlocks []Block) {
-	if len(newBlocks) > len(Blockchain) {
-		Blockchain = newBlocks
-	}
-}
+// func replaceChain(newBlocks []Block) {
+// 	if len(newBlocks) > len(Blockchain) {
+// 		Blockchain = newBlocks
+// 	}
+// }
 
+// Checked-190818-2148
 func run() error {
 	mux := makeMuxRouter()
 	httpAddr := "8080" //"os.Getenv("ADDR")"
@@ -87,6 +128,7 @@ func run() error {
 	return nil
 }
 
+// Checked-190818-2149
 func makeMuxRouter() http.Handler {
 	muxRouter := mux.NewRouter()
 	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("Get")
@@ -94,6 +136,7 @@ func makeMuxRouter() http.Handler {
 	return muxRouter
 }
 
+// Checked-190818-2149
 func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
 	bytes, err := json.MarshalIndent(Blockchain, "", "  ")
 	if err != nil {
@@ -103,11 +146,9 @@ func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(bytes))
 }
 
-type Message struct {
-	PayloadData string
-}
-
+// Checked-190818-2154
 func handleWriteBlockchain(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	var m Message
 
 	decoder := json.NewDecoder(r.Body)
@@ -117,21 +158,22 @@ func handleWriteBlockchain(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	newBlock, err := generateBlock(Blockchain[len(Blockchain)-1], m.PayloadData)
-	if err != nil {
-		respondWithJSON(w, r, http.StatusInternalServerError, m)
-		return
-	}
+	// Ensure atomicity when creating new block
+	mutex.Lock()
+	newBlock := generateBlock(Blockchain[len(Blockchain)-1], m.PayloadData)
+	mutex.Unlock()
+
 	if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
-		newBlockChain := append(Blockchain, newBlock)
-		replaceChain(newBlockChain)
+		Blockchain := append(Blockchain, newBlock)
 		spew.Dump(Blockchain)
 	}
 
 	respondWithJSON(w, r, http.StatusCreated, newBlock)
 }
 
+// Checked-190818-2152
 func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
 	response, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -142,6 +184,12 @@ func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload i
 	w.Write(response)
 }
 
+// Created-190818-2015
+func isHashValid(hash string, difficulty int) bool {
+	prefix := strings.Repeat("0", difficulty)
+	return strings.HasPrefix(hash, prefix)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -150,9 +198,13 @@ func main() {
 
 	go func() {
 		t := time.Now()
-		genesisBlock := Block{0, t.String(), "INIT. Payload Data", "", ""}
+		genesisBlock := Block{}
+		genesisBlock = Block{0, t.String(), "INIT. Payload Data", calculateHash(genesisBlock), "", difficulty, ""}
 		spew.Dump(genesisBlock)
+
+		mutex.Lock()
 		Blockchain = append(Blockchain, genesisBlock)
+		mutex.Unlock()
 	}()
 	log.Fatal(run())
 }
