@@ -1,7 +1,7 @@
 # SimpleChain_preview_19.0
 The Darren Chain 19.0 Preview Version
 
-![Demo](assets/img_04.png)
+![Demo](assets/img_04.jpg)
 
 __Windows System:__
 
@@ -44,4 +44,4 @@ For using POST requests, i like to use Postman ( in GUI ) and Curl ( in CLI ).
 
 ![POST method in Postman](assets/img_03.png)
 
-![Demo](assets/img_04.png)
+![Demo](assets/img_04.jpg)
