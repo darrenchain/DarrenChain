@@ -1,6 +1,8 @@
 # SimpleChain_preview_19.0
 The Darren Chain 19.0 Preview Version
 
+![Demo](assets/img_04.png)
+
 __Windows System:__
 
 You can clone this repo and run <code>main.exe</code> directly.
@@ -42,4 +44,4 @@ For using POST requests, i like to use Postman ( in GUI ) and Curl ( in CLI ).
 
 ![POST method in Postman](assets/img_03.png)
 
-![Get method in curl](assets/img_02.png)
+![Demo](assets/img_04.png)
