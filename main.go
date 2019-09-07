@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/line/line-bot-sdk-go/linebot"
 )
 
 // Checked-190818-2147
@@ -40,9 +40,9 @@ var Blockchain []Block
 var genesisBlock Block
 
 // Checked-190818-2147
-type Message struct {
-	PayloadData string
-}
+// type Message struct {
+// 	PayloadData string
+// }
 
 // Checked-190818-2147
 var mutex = &sync.Mutex{}
@@ -57,7 +57,7 @@ func calculateHash(block Block) string {
 }
 
 // Modified-190818-2016
-func generateBlock(oldBlock Block, PayloadData string) Block {
+func generateBlock(oldBlock Block, PayloadData string, recieverId string) Block {
 	var newBlock Block
 
 	t := time.Now()
@@ -72,13 +72,16 @@ func generateBlock(oldBlock Block, PayloadData string) Block {
 	for i := 0; ; i++ {
 		hex := fmt.Sprintf("%x", i)
 		newBlock.Nonce = hex
-
 		if !isHashValid(calculateHash(newBlock), newBlock.Difficulty) {
-			fmt.Println(calculateHash(newBlock), " is still generating...")
-			time.Sleep(time.Second)
+			msg := "Mining: [" + calculateHash(newBlock) + "]"
+			bot.PushMessage(recieverId, linebot.NewTextMessage(msg)).Do()
+			fmt.Println(msg)
+			// time.Sleep(time.Second)
 			continue
 		} else {
-			fmt.Println(calculateHash(newBlock), " generation succeeded!!")
+			msg := "Mining succeeded: [" + calculateHash(newBlock) + "]"
+			bot.PushMessage(recieverId, linebot.NewTextMessage(msg)).Do()
+			fmt.Println(msg)
 			newBlock.Hash = calculateHash(newBlock)
 			break
 		}
@@ -117,8 +120,8 @@ func run() error {
 	s := &http.Server{
 		Addr:           ":" + httpAddr,
 		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		ReadTimeout:    100 * time.Second,
+		WriteTimeout:   100 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
@@ -132,40 +135,100 @@ func run() error {
 // Checked-190818-2149
 func makeMuxRouter() http.Handler {
 	muxRouter := mux.NewRouter()
-	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("Get")
-	muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
+	// muxRouter.HandleFunc("/webhook", handleGetBlockchain).Methods("Get")
+	muxRouter.HandleFunc("/webhook", func(w http.ResponseWriter, req *http.Request) {
+		events, err := bot.ParseRequest(req)
+		if err != nil {
+			if err == linebot.ErrInvalidSignature {
+				w.WriteHeader(400)
+			} else {
+				w.WriteHeader(500)
+			}
+			return
+		}
+		for _, event := range events {
+			if event.Type == linebot.EventTypeMessage {
+				switch message := event.Message.(type) {
+				case *linebot.TextMessage:
+					usrMsg := message.Text
+
+					tmpMsg := make([]string, 2)
+					tmpMsg = strings.Fields(usrMsg)
+
+					recieverId := event.Source.UserID
+					if event.Source.GroupID != "" {
+						recieverId = event.Source.GroupID
+					} else if event.Source.RoomID != "" {
+						recieverId = event.Source.RoomID
+					}
+					// event.Source.UserID,
+					// event.Source.GroupID,
+					// event.Source.RoomID,
+					// recieverId :=
+
+					if strings.EqualFold(tmpMsg[0], ":SEND") {
+						handleWriteBlock(w, req, event.ReplyToken, recieverId, tmpMsg[1])
+					} else if strings.EqualFold(tmpMsg[0], ":GET") {
+						tmpIndex, err := strconv.ParseUint(tmpMsg[1], 10, 64)
+						if err != nil {
+							log.Fatal(err)
+						}
+						handleGetBlockchain(w, req, event.ReplyToken, tmpIndex)
+					}
+					// if _, err = bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(message.Text)).Do(); err != nil {
+					// 	log.Print(err)
+					// }
+				}
+			}
+		}
+	}).Methods("POST")
 	return muxRouter
 }
 
 // Checked-190818-2149
-func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
-	bytes, err := json.MarshalIndent(Blockchain, "", "  ")
+// w http.ResponseWriter, r *http.Request,
+func handleGetBlockchain(w http.ResponseWriter, r *http.Request, replyToken string, index uint64) {
+	msg, err := json.MarshalIndent(Blockchain, "", "\t")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	io.WriteString(w, string(bytes))
+	tmpMsg := "All Block: " + string(msg)
+	splitMsg := strings.Split(tmpMsg, "}")
+
+	bot.ReplyMessage(replyToken, linebot.NewTextMessage(splitMsg[index])).Do()
+	fmt.Println("Line User request All Block content")
+	// io.WriteString(w, string(bytes))
 }
 
 // Checked-190818-2154
-func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+// w http.ResponseWriter, r *http.Request,
+func handleWriteBlock(w http.ResponseWriter, r *http.Request, replyToken string, recieverId string, payloadData string) {
 	w.Header().Set("Content-Type", "application/json")
-	var m Message
+	// var m Message
 
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&m); err != nil {
-		respondWithJSON(w, r, http.StatusInternalServerError, r.Body)
-		return
-	}
-	defer r.Body.Close()
+	// decoder := json.NewDecoder(r.Body)
+	// if err := decoder.Decode(&m); err != nil {
+	// 	respondWithJSON(w, r, http.StatusInternalServerError, r.Body)
+	// 	return
+	// }
+	// defer r.Body.Close()
 
 	// Ensure atomicity when creating new block
 	mutex.Lock()
-	newBlock := generateBlock(Blockchain[len(Blockchain)-1], m.PayloadData)
+	newBlock := generateBlock(Blockchain[len(Blockchain)-1], payloadData, recieverId)
 	mutex.Unlock()
 
 	if isBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
 		Blockchain = append(Blockchain, newBlock)
+
+		msg, err := json.MarshalIndent(newBlock, "", "\t")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpMsg := "New Block: " + string(msg)
+		bot.ReplyMessage(replyToken, linebot.NewTextMessage(tmpMsg)).Do()
 		spew.Dump(Blockchain)
 	}
 
@@ -191,8 +254,23 @@ func isHashValid(hash string, difficulty int) bool {
 	return strings.HasPrefix(hash, prefix)
 }
 
+var bot *linebot.Client
+
 func main() {
-	err := godotenv.Load()
+	// Line Message API Authentication
+	var bot_t, err = linebot.New(
+		"<CHANNEL_SECRET>",
+		"<CHANNEL_TOKEN>",
+	)
+	bot = bot_t
+	if err != nil {
+		log.Fatal(err)
+	}
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	err = godotenv.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
