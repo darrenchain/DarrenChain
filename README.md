@@ -1,5 +1,5 @@
-# SimpleChain_preview_19.0
-The Darren Chain 19.0 Preview Version
+# DarrenChain
+Contributor: Darren K.J. Chen
 
 __Windows System:__
 
